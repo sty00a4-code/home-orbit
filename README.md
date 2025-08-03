@@ -23,7 +23,7 @@ start.lua # setup webserver with i.e. state
 Cargo.toml # the usual rust executable with home-orbit as a dependency
 ```
 
-## Routing
+### Routing
 
 The file structure in this folder represents the webservers internal routing.
 These Lua files will be read and run on any request, there is no caching.
@@ -44,7 +44,7 @@ return function(attrs, ...)
 end
 ```
 
-## State
+### State
 
 To share state it uses axums state implementation and the internal `AppState` structure, where the Lua state is saved.
 ```rust
@@ -53,3 +53,18 @@ pub struct AppState {
 }
 ```
 That means you can use globals to share state between the handles.
+
+## Service
+
+Before the program starts, the following things are done:
+1. Create a new Lua runtime
+2. Execute `start.lua`
+3. Load all lua files under `scripts/`
+4. Axum service is started
+
+This is how requests are processed:
+1. Request arrived and the rust `handle` function is called
+2. Route file is loaded and returning function captured
+3. `handle.lua` is run if it exists
+4. Route handle function is called
+5. HTTP response is constructed from the returning table

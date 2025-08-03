@@ -23,10 +23,13 @@ unsafe impl Send for AppState {}
 unsafe impl Sync for AppState {}
 
 pub async fn run_app() -> Result<(), mlua::Error> {
-    let lua = Lua::new();
+    let mut lua = Lua::new();
     lua.load(&fs::read_to_string("start.lua")?)
         .set_name("start.lua")
         .exec()?;
+    if let Err(err) = require_folder(&mut lua, "scripts") {
+        return Err(mlua::Error::RuntimeError(format!("{err:?}")));
+    }
     let state = AppState {
         lua: Arc::new(Mutex::new(lua)),
     };
@@ -35,8 +38,7 @@ pub async fn run_app() -> Result<(), mlua::Error> {
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
-        .unwrap();
-    Ok(())
+        .map_err(|err| mlua::Error::RuntimeError(format!("{err:?}")))
 }
 
 pub fn require<T: FromLuaMulti>(lua: &mut Lua, path: &str) -> Result<T, Response> {
@@ -74,11 +76,6 @@ pub async fn handle(
     // Clone the Lua VM handle
     let mut lua = state.lua.lock().unwrap();
 
-    // Load helper scripts
-    if let Err(err) = require_folder(&mut lua, "scripts") {
-        return err;
-    }
-
     // Load the route handler
     let route_file = format!("route{}.lua", original_uri.path());
     let handler: Function = match require(&mut lua, &route_file) {
@@ -86,6 +83,11 @@ pub async fn handle(
         Err(resp) => return resp,
     };
 
+    if let Ok(handle) = fs::read_to_string("handle.lua") {
+        if let Err(err) = lua.load(&handle).set_name("handle.lua").exec() {
+            return err.to_string().into_response();
+        }
+    }
     // Call the Lua handler (it returns a table)
     match handler.call::<Table>(query) {
         Ok(tbl) => {
