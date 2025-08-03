@@ -1,0 +1,13 @@
+[package]
+name = "home-orbit"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.98"
+mlua = { version = "0.11.1", features = ["luau", "vendored", "async"] }
+
+
+[[bin]]
+name = "home-orbit"
+path = "src/main.rs"
