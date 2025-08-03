@@ -1,0 +1,12 @@
+{
+    "Lua.diagnostics.globals": [
+        "response",
+        "handle",
+        "html",
+        "element",
+        "head",
+        "body",
+        "document",
+        "htmlDocument"
+    ]
+}
