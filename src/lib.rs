@@ -1,4 +1,5 @@
 use axum::body::boxed;
+use axum::response::Redirect;
 use axum::{
     Router,
     body::Body,
@@ -42,8 +43,12 @@ pub async fn run_app() -> Result<(), mlua::Error> {
     let state = AppState {
         lua: Arc::new(Mutex::new(lua)),
     };
-    let app = Router::new().route("/*path", get(handle)).with_state(state);
+    let app = Router::new()
+        .route("/", get(|| async { Redirect::permanent("/home") }))
+        .route("/*path", get(handle))
+        .with_state(state);
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    println!("{addr}");
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await

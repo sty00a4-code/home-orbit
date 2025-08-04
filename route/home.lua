@@ -4,9 +4,7 @@ return function (attrs)
     return response {
         status = 200,
         body = htmlDocument {
-            head {
-                style { STYLES.main };
-            };
+            head { style { STYLES.main }; };
             body { VISITED };
         },
         headers = {
