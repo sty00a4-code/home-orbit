@@ -7,6 +7,9 @@
         "head",
         "body",
         "document",
-        "htmlDocument"
+        "htmlDocument",
+        "getCSS",
+        "style",
+        "STYLES"
     ]
 }

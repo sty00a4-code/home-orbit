@@ -4,11 +4,13 @@ return function (attrs)
     return response {
         status = 200,
         body = htmlDocument {
-            head {};
+            head {
+                style { STYLES.main };
+            };
             body { VISITED };
         },
         headers = {
             ["Content-Type"] = "text/html"
-        }
+        },
     }
 end

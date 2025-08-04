@@ -1,5 +1,5 @@
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    home_orbit_lib::run_app().await.unwrap();
+    let _ = dbg!(home_orbit_lib::run_app().await);
     Ok(())
 }

@@ -56,3 +56,9 @@ end
 function body(content)
     return element("body", content)
 end
+---@param content table
+---@return HTMLElement
+function style(content)
+    content.type = "text/css"
+    return element("style", content)
+end

@@ -22,8 +22,17 @@ pub struct AppState {
 unsafe impl Send for AppState {}
 unsafe impl Sync for AppState {}
 
+pub fn get_css(_: &Lua, (name,): (String,)) -> Result<String, mlua::Error> {
+    fs::read_to_string(format!("styles/{name}.css"))
+        .map_err(|err| mlua::Error::RuntimeError(err.to_string()))
+}
+
 pub async fn run_app() -> Result<(), mlua::Error> {
     let mut lua = Lua::new();
+    {
+        let f = lua.create_function_mut(get_css)?;
+        lua.globals().set("getCSS", f)?;
+    }
     lua.load(&fs::read_to_string("start.lua")?)
         .set_name("start.lua")
         .exec()?;
@@ -83,11 +92,16 @@ pub async fn handle(
         Err(resp) => return resp,
     };
 
-    if let Ok(handle) = fs::read_to_string("handle.lua") {
-        if let Err(err) = lua.load(&handle).set_name("handle.lua").exec() {
-            return err.to_string().into_response();
-        }
-    }
+    match require::<Function>(&mut lua, "handle.lua") {
+        Ok(f) => match f.call::<Value>(query.clone()) {
+            Ok(_) => {}
+            Err(e) => {
+                let msg = format!("[ERROR] calling '{}': {}", "handle.lua", e);
+                return (StatusCode::INTERNAL_SERVER_ERROR, msg).into_response();
+            }
+        },
+        Err(resp) => return resp,
+    };
     // Call the Lua handler (it returns a table)
     match handler.call::<Table>(query) {
         Ok(tbl) => {
