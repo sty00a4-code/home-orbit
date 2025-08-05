@@ -4,6 +4,8 @@
     ],
     "Lua.diagnostics.globals": [
         "getCSS",
-        "getStyles"
+        "getStyles",
+        "getScript",
+        "getScripts"
     ]
 }

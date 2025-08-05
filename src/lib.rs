@@ -46,21 +46,52 @@ pub fn get_styles(lua: &Lua, _: ()) -> Result<Value, mlua::Error> {
         .collect::<HashMap<String, String>>()
         .into_lua(lua)
 }
+pub fn get_script(_: &Lua, (name,): (String,)) -> Result<String, mlua::Error> {
+    fs::read_to_string(format!("scripts/{name}.js"))
+        .map_err(|err| mlua::Error::RuntimeError(err.to_string()))
+}
+pub fn get_scripts(lua: &Lua, _: ()) -> Result<Value, mlua::Error> {
+    fs::read_dir("scripts")?
+        .flatten()
+        .zip(fs::read_dir("scripts")?.flatten().filter_map(|file| {
+            file.file_name()
+                .into_string()
+                .unwrap_or_default()
+                .split_once(".")
+                .map(|(name, _)| name.to_string())
+        }))
+        .filter_map(|(file, name)| {
+            file.path()
+                .to_str()
+                .and_then(|path| fs::read_to_string(format!("{path}")).ok())
+                .map(|content| (name, content))
+        })
+        .collect::<HashMap<String, String>>()
+        .into_lua(lua)
+}
 
 pub async fn run_app() -> Result<(), mlua::Error> {
     let mut lua = Lua::new();
+    // custom functions
     {
         let f = lua.create_function(get_css)?;
         lua.globals().set("getCSS", f)?;
         let f = lua.create_function(get_styles)?;
         lua.globals().set("getStyles", f)?;
+        let f = lua.create_function(get_script)?;
+        lua.globals().set("getScript", f)?;
+        let f = lua.create_function(get_scripts)?;
+        lua.globals().set("getScripts", f)?;
     }
+    // execute start.lua
     lua.load(&fs::read_to_string("start.lua")?)
         .set_name("start.lua")
         .exec()?;
-    if let Err(err) = require_folder(&mut lua, "scripts") {
+    // load libs
+    if let Err(err) = require_folder(&mut lua, "libs") {
         return Err(mlua::Error::RuntimeError(format!("{err:?}")));
     }
+    // create app
     let state = AppState {
         lua: Arc::new(Mutex::new(lua)),
     };
@@ -68,6 +99,7 @@ pub async fn run_app() -> Result<(), mlua::Error> {
         .route("/", get(|| async { Redirect::permanent("/home") }))
         .route("/*path", get(handle))
         .with_state(state);
+    // serve app
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     println!("{addr}");
     axum::Server::bind(&addr)
