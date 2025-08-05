@@ -7,7 +7,7 @@ local html_meta = {
     __name = "html-element",
     ---@param self HTMLElement
     __tostring = function (self)
-        local attrs = ""
+        local attrs = " "
         local content = ""
         for k, v in pairs(self.content) do
             if type(k) == "number" then
@@ -16,7 +16,7 @@ local html_meta = {
                 attrs = attrs .. k .. "=" .. ("%q"):format(v) .. " "
             end
         end
-        return ("<%s %s>%s</%s>"):format(self.name, attrs, content, self.name)
+        return ("<%s%s>%s</%s>"):format(self.name, attrs, content, self.name)
     end,
 }
 

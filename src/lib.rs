@@ -8,7 +8,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
-use mlua::{FromLuaMulti, Function, Lua, Table, Value};
+use mlua::{FromLuaMulti, Function, IntoLua, Lua, Table, Value};
 use std::{
     collections::HashMap,
     fs,
@@ -27,12 +27,33 @@ pub fn get_css(_: &Lua, (name,): (String,)) -> Result<String, mlua::Error> {
     fs::read_to_string(format!("styles/{name}.css"))
         .map_err(|err| mlua::Error::RuntimeError(err.to_string()))
 }
+pub fn get_styles(lua: &Lua, _: ()) -> Result<Value, mlua::Error> {
+    fs::read_dir("styles")?
+        .flatten()
+        .zip(fs::read_dir("styles")?.flatten().filter_map(|file| {
+            file.file_name()
+                .into_string()
+                .unwrap_or_default()
+                .split_once(".")
+                .map(|(name, _)| name.to_string())
+        }))
+        .filter_map(|(file, name)| {
+            file.path()
+                .to_str()
+                .and_then(|path| fs::read_to_string(format!("{path}")).ok())
+                .map(|content| (name, content))
+        })
+        .collect::<HashMap<String, String>>()
+        .into_lua(lua)
+}
 
 pub async fn run_app() -> Result<(), mlua::Error> {
     let mut lua = Lua::new();
     {
-        let f = lua.create_function_mut(get_css)?;
+        let f = lua.create_function(get_css)?;
         lua.globals().set("getCSS", f)?;
+        let f = lua.create_function(get_styles)?;
+        lua.globals().set("getStyles", f)?;
     }
     lua.load(&fs::read_to_string("start.lua")?)
         .set_name("start.lua")

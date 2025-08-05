@@ -3,6 +3,7 @@
         "lowercase-global"
     ],
     "Lua.diagnostics.globals": [
-        "getCSS"
+        "getCSS",
+        "getStyles"
     ]
 }
